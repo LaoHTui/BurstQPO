@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.idea/
+.git_nested_backup/
+examples/*_example.png
+examples/*_example.npz

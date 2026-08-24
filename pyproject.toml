@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "burstqpo"
+version = "0.1.0"
+description = "Reusable QPO analysis tools for gamma-ray-burst light curves"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.12",
+    "matplotlib>=3.8",
+    "astropy>=5.0",
+]
+
+[project.optional-dependencies]
+accelerated = ["numba>=0.59"]
+plot = ["matplotlib>=3.8"]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+include = ["burstqpo*"]
