@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -22,14 +23,23 @@ def main() -> None:
     frequencies = np.linspace(0.3, 2.2, 1200)
 
     result = z2n(events, frequencies=frequencies, n_harmonics=1, time_unit="s")
+    print(result.global_pvalue())
     peak = result.find_peaks(top_n=1)[0]
     print(f"Peak frequency: {peak['frequency']:.5f} +/- {peak['frequency_err']:.5f} Hz")
+    print(f"Local p-value: {peak['local_pvalue']:.3e}")
+    print(f"Global p-value: {peak['global_pvalue']:.3e} (N_eff={result.n_trials:.2f})")
 
     output_dir = Path(__file__).resolve().parent
     result.plot_z2n(save_path=output_dir / "z2n_example.png", show_peaks=True)
     result.save_npz(output_dir / "z2n_example.npz")
     restored = Z2nResult.load_npz(output_dir / "z2n_example.npz")
     print(f"Restored harmonics: n={restored.n_harmonics}")
+
+    plt.plot(result.frequency, result.global_pvalue())
+    plt.show()
+    print("s")
+
+
 
 
 if __name__ == "__main__":

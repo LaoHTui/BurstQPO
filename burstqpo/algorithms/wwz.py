@@ -181,8 +181,8 @@ def _frequency_grid(frequencies, frequency_parameters):
     return grid
 
 
-def wwz(time, values, frequencies=None, *, frequency_parameters=None, tau=None,
-        tau_number=1000, c=0.0125, time_unit="unknown") -> WWZResult:
+def wwz(time, values, frequencies=None, *, uncertainty=None, frequency_parameters=None,
+        tau=None, tau_number=1000, c=0.0125, time_unit="unknown") -> WWZResult:
     """Compute the Foster weighted wavelet Z-transform.
 
     The input time unit is arbitrary but must be consistent with frequency:
@@ -193,14 +193,25 @@ def wwz(time, values, frequencies=None, *, frequency_parameters=None, tau=None,
     flux = np.asarray(values, dtype=float)
     if series.ndim != 1 or flux.ndim != 1 or len(series) != len(flux):
         raise ValueError("time and values must be one-dimensional arrays of equal length")
+    errors = None if uncertainty is None else np.asarray(uncertainty, dtype=float)
+    if errors is not None:
+        if errors.ndim != 1 or len(errors) != len(series):
+            raise ValueError("uncertainty must be one-dimensional and have the same length as time")
+        if np.any(np.isfinite(errors) & (errors < 0)):
+            raise ValueError("finite uncertainty values must be non-negative")
     finite = np.isfinite(series) & np.isfinite(flux)
+    if errors is not None:
+        errors = errors[finite]
     series, flux = series[finite], flux[finite]
     if len(series) < 4:
         raise ValueError("WWZ requires at least four finite observations")
     order = np.argsort(series)
     series, flux = np.ascontiguousarray(series[order]), np.ascontiguousarray(flux[order])
+    if errors is not None:
+        errors = np.ascontiguousarray(errors[order])
     time_origin = float(series[0])
-    series = series - series[0]
+    original_series = series
+    series = series - time_origin
     if not np.isfinite(c) or float(c) <= 0:
         raise ValueError("c must be finite and greater than zero")
     c = float(c)
@@ -230,11 +241,13 @@ def wwz(time, values, frequencies=None, *, frequency_parameters=None, tau=None,
     delta = 1.0 / (2.0 * np.pi * freq * np.sqrt(c))
     coi = np.array([np.minimum(series[0] + delta, mid), np.maximum(series[-1] - delta, mid)])
     frequency_step = float(np.median(np.diff(freq))) if len(freq) > 1 else np.nan
+    # Keep the public grid and COI in the caller's time coordinates. The WWZ
+    # kernel above uses the origin-shifted arrays for numerical conditioning.
     result = WWZResult(
-        tau_values, freq, power, coi,
+        tau_values + time_origin, freq, power, coi + time_origin,
         float(np.pi * np.sqrt(c) * np.ptp(series)), amplitude, n_eff, c,
         str(time_unit), time_origin, float(freq[0]), float(freq[-1]),
-        frequency_step, int(len(tau_values)), int(len(series)),
+        frequency_step, int(len(tau_values)), int(len(series)), original_series, flux, errors,
     )
     return result
 
